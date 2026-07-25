@@ -36,7 +36,7 @@ const COMMANDS: CommandTree = {
 
         openLyricsEditor(songIndex?: string) {
             if (!songIndex) {
-                vscode.window.showErrorMessage("This command cannot be activated manually.");
+                vscode.window.showErrorMessage(vscode.l10n.t("This command cannot be activated manually."));
                 return;
             }
             LocalizedDataManager.with(async ldManager => {
@@ -50,7 +50,7 @@ const COMMANDS: CommandTree = {
 
         openMdbEditor(tableName?: MdbTableName) {
             if (!tableName) {
-                vscode.window.showErrorMessage("This command cannot be activated manually.");
+                vscode.window.showErrorMessage(vscode.l10n.t("This command cannot be activated manually."));
                 return;
             }
             LocalizedDataManager.with(async ldManager => {
@@ -71,7 +71,7 @@ const COMMANDS: CommandTree = {
 
         openRaceStoryEditor(storyId?: string | number) {
             if (!storyId) {
-                vscode.window.showErrorMessage("This command cannot be activated manually.");
+                vscode.window.showErrorMessage(vscode.l10n.t("This command cannot be activated manually."));
                 return;
             }
             const nStoryId = utils.normalizeStoryId(storyId);
@@ -86,7 +86,7 @@ const COMMANDS: CommandTree = {
 
         openStoryEditor(type?: "story" | "home", storyId?: string, categoryId?: string, groupId?: string) {
             if (!type || !storyId) {
-                vscode.window.showErrorMessage("This command cannot be activated manually.");
+                vscode.window.showErrorMessage(vscode.l10n.t("This command cannot be activated manually."));
                 return;
             }
 
@@ -105,7 +105,7 @@ const COMMANDS: CommandTree = {
                 
                 case "home":
                     if (!categoryId || !groupId) {
-                        vscode.window.showErrorMessage("Missing arguments.");
+                        vscode.window.showErrorMessage(vscode.l10n.t("Missing arguments."));
                         return;
                     }
                     relDictPath = ["home", "data", categoryId, groupId, `hometimeline_${categoryId}_${groupId}_${storyId}.json`];
@@ -124,7 +124,7 @@ const COMMANDS: CommandTree = {
         runAllAutomations() {
             vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: "Running automations..."
+                title: vscode.l10n.t("Running automations...")
             }, async () => {
                 try {
                     await automation.runAll();
@@ -137,12 +137,12 @@ const COMMANDS: CommandTree = {
 
         async runAutomation() {
             const filename = await vscode.window.showQuickPick(automation.getScripts(), {
-                placeHolder: "Pick a script to run"
+                placeHolder: vscode.l10n.t("Pick a script to run")
             });
             if (filename) {
                 vscode.window.withProgress({
                     location: vscode.ProgressLocation.Notification,
-                    title: `Running ${filename}...`
+                    title: vscode.l10n.t("Running {0}...", {0: filename})
                 }, async () => {
                     try {
                         await automation.run(filename);
@@ -157,14 +157,14 @@ const COMMANDS: CommandTree = {
         clearCache() {
             vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: "Clearing cache..."
+                title: vscode.l10n.t("Clearing cache...")
             }, async () => {
                 try {
                     await fs.rm(path.join(ZOKUZOKU_DIR, "cache"), { recursive: true, force: true });
-                    vscode.window.showInformationMessage("Cache cleared.");
+                    vscode.window.showInformationMessage(vscode.l10n.t("Cache cleared."));
                 }
                 catch (e) {
-                    vscode.window.showErrorMessage("Failed to clear cache: " + e);
+                    vscode.window.showErrorMessage(vscode.l10n.t("Failed to clear cache: {0}", {0: e}));
                 }
             });
         },
@@ -176,16 +176,15 @@ const COMMANDS: CommandTree = {
                 });
             },
             setLocalizedDataDir() {
-                let localizedDataDir = LocalizedDataManager.instance?.dirUri.fsPath;
+                const localizedDataDir = LocalizedDataManager.instance?.dirUri.fsPath;
                 if (!localizedDataDir) {
-                    return vscode.window.showErrorMessage("ZokuZoku has not been activated.");
+                    return vscode.window.showErrorMessage(vscode.l10n.t("ZokuZoku has not been activated."));
                 }
 
                 updateHachimiConfig(config => {
                     if (config._localized_data_dir || config._translation_repo_index) {
                         vscode.window.showWarningMessage(
-                            "The localized data dir has already been set by ZokuZoku. Revert it " +
-                            "first if you want to swap it with the current folder."
+                            vscode.l10n.t("The localized data dir has already been set by ZokuZoku. Revert it first if you want to swap it with the current folder.")
                         );
                         return;
                     }
@@ -201,7 +200,9 @@ const COMMANDS: CommandTree = {
                 .then(res => {
                     if (res) {
                         vscode.window.showInformationMessage(
-                            `Localized data dir has been set to \"${localizedDataDir}\"`
+                            vscode.l10n.t("Localized data dir has been set to \"{0}\"",
+                                {0: localizedDataDir}
+                            )
                         );
                     }
                 })
@@ -212,7 +213,7 @@ const COMMANDS: CommandTree = {
             revertLocalizedDataDir() {
                 updateHachimiConfig(config => {
                     if (!("_localized_data_dir" in config || "_translation_repo_index" in config)) {
-                        vscode.window.showWarningMessage("Nothing to revert in the config file.");
+                        vscode.window.showWarningMessage(vscode.l10n.t("Nothing to revert in the config file."));
                         return;
                     }
 
@@ -243,7 +244,9 @@ const COMMANDS: CommandTree = {
                 .then(res => {
                     if (res) {
                         vscode.window.showInformationMessage(
-                            `Localized data dir has been reverted to \"${res.localized_data_dir}\"`
+                            vscode.l10n.t("Localized data dir has been reverted to \"{0}\"",
+                                {0: res.localized_data_dir}
+                            )
                         );
                     }
                 })
@@ -282,7 +285,7 @@ export function registerCommands(
     context: vscode.ExtensionContext, commandTree = COMMANDS, disposables: vscode.Disposable[] = [], prefix = ""
 ): vscode.Disposable[] {
     for (const name in commandTree) {
-        let node = commandTree[name];
+        const node = commandTree[name];
         if (typeof node === "function") {
             disposables.push(vscode.commands.registerCommand(prefix + name, node));
         }

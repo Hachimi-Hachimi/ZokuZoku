@@ -6,22 +6,23 @@
     import GenericSlots from "../lib/GenericSlots.svelte";
     import StorySplitView from "./StorySplitView.svelte";
     import { translatedPreview } from "./stores";
+    import * as l10n from "@vscode/l10n";
 
     const preview = translatedPreview;
     export const actions: IPanelAction[] = [
         {
             icon: "comment",
-            tooltip: "Dialogue preview",
+            tooltip: l10n.t("Dialogue preview"),
             onClick: () => $preview = $preview == "dialogue" ? null : "dialogue"
         },
         {
             icon: "book",
-            tooltip: "Story preview",
+            tooltip: l10n.t("Story preview"),
             onClick: () => $preview = $preview == "story" ? null : "story"
         }
     ];
 
-    const placeholder = "Type your translation here...";
+    const placeholder = l10n.t("Type your translation here...");
 </script>
 
 <StorySplitView preview={$preview} translated>

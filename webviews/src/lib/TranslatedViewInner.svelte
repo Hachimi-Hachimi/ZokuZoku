@@ -4,10 +4,11 @@
     import { translatedSlotProps } from "../utils";
     import GenericSlots from "./GenericSlots.svelte";
     import TextSlot from "./TextSlot.svelte";
+    import * as l10n from "@vscode/l10n";
 
     export const actions: (IPanelAction | null)[] | undefined = undefined;
 
-    const placeholder = "Type your translation here...";
+    const placeholder = l10n.t("Type your translation here...");
 </script>
 
 <GenericSlots>

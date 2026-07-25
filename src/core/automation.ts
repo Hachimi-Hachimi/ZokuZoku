@@ -36,7 +36,7 @@ async function getScripts() {
 function getScriptDir() {
     const folderUri = vscode.workspace.workspaceFolders?.[0]?.uri;
     if (!folderUri) {
-        throw new Error("No workspace folder.");
+        throw new Error(vscode.l10n.t('No workspace folder.'));
     }
     return vscode.Uri.joinPath(folderUri, ".vscode", "zk_auto").fsPath;
 }

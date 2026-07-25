@@ -1,15 +1,17 @@
 {
-  "name": "zokuzoku",
-  "displayName": "ZokuZoku",
-  "publisher": "LeadRDRK",
-  "description": "Hachimi translation tool",
+  "name": "zokuzoku-edge",
+  "displayName": "%extension.displayName%",
+  "publisher": "THShafi170",
+  "description": "%extension.description%",
   "repository": {
-    "url": "https://github.com/Hachimi-Hachimi/ZokuZoku"
+    "url": "https://github.com/THShafi170/ZokuZoku-Edge"
   },
-  "version": "0.3.2",
+  "version": "1.1.2",
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.96.0",
+    "node": ">=22"
   },
+  "packageManager": "pnpm@10.27.0",
   "categories": [
     "Other"
   ],
@@ -18,12 +20,13 @@
     "workspaceContains:localized_data/config.json"
   ],
   "main": "./out/extension.js",
+  "l10n": "./l10n",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
           "id": "zokuzoku",
-          "title": "ZokuZoku",
+          "title": "%activitybar.zokuzoku.title%",
           "icon": "assets/activity_bar_icon.svg"
         }
       ]
@@ -32,48 +35,48 @@
       "zokuzoku": [
         {
           "id": "inactive",
-          "name": "Inactive",
+          "name": "%view.inactive.name%",
           "when": "!zokuzoku.active"
         },
         {
           "id": "stories",
-          "name": "All stories",
+          "name": "%view.stories.name%",
           "visibility": "collapsed",
           "when": "zokuzoku.active"
         },
         {
           "id": "home-stories",
-          "name": "Home dialogues",
+          "name": "%view.homeStories.name%",
           "visibility": "collapsed",
           "when": "zokuzoku.active"
         },
         {
           "id": "main-stories",
-          "name": "Main stories",
+          "name": "%view.mainStories.name%",
           "visibility": "collapsed",
           "when": "zokuzoku.active"
         },
         {
           "id": "localize-dict",
-          "name": "Localize dict",
+          "name": "%view.localizeDict.name%",
           "visibility": "collapsed",
           "when": "zokuzoku.active"
         },
         {
           "id": "mdb",
-          "name": "MDB",
+          "name": "%view.mdb.name%",
           "visibility": "collapsed",
           "when": "zokuzoku.active"
         },
         {
           "id": "lyrics",
-          "name": "Lyrics",
+          "name": "%view.lyrics.name%",
           "visibility": "collapsed",
           "when": "zokuzoku.active"
         },
         {
           "id": "hachimi-controls",
-          "name": "Hachimi Controls",
+          "name": "%view.hachimiControls.name%",
           "visibility": "collapsed",
           "when": "zokuzoku.active"
         }
@@ -82,15 +85,15 @@
     "viewsWelcome": [
       {
         "view": "inactive",
-        "contents": "ZokuZoku has not been enabled for this workspace.\n[Enable](command:zokuzoku.enable)"
+        "contents": "%welcome.inactive%"
       },
       {
         "view": "localize-dict",
-        "contents": "[Open editor](command:zokuzoku.openLocalizeDictEditor)"
+        "contents": "%welcome.localizeDict%"
       },
       {
         "view": "hachimi-controls",
-        "contents": "[Reload localized data](command:zokuzoku.hachimi.reloadLocalizedData)\n[Set translation folder](command:zokuzoku.hachimi.setLocalizedDataDir)\n[Revert translation folder](command:zokuzoku.hachimi.revertLocalizedDataDir)"
+        "contents": "%welcome.hachimiControls%"
       }
     ],
     "menus": {
@@ -120,77 +123,77 @@
     "commands": [
       {
         "command": "zokuzoku.enable",
-        "title": "ZokuZoku: Enable"
+        "title": "%command.enable.title%"
       },
       {
         "command": "zokuzoku.openLocalizeDictEditor",
-        "title": "ZokuZoku: Open localize dict editor"
+        "title": "%command.openLocalizeDictEditor.title%"
       },
       {
         "command": "zokuzoku.openLyricsEditor",
-        "title": "ZokuZoku: Open lyrics editor"
+        "title": "%command.openLyricsEditor.title%"
       },
       {
         "command": "zokuzoku.openMdbEditor",
-        "title": "ZokuZoku: Open MDB editor"
+        "title": "%command.openMdbEditor.title%"
       },
       {
         "command": "zokuzoku.openRaceStoryEditor",
-        "title": "ZokuZoku: Open race story editor"
+        "title": "%command.openRaceStoryEditor.title%"
       },
       {
         "command": "zokuzoku.openStoryEditor",
-        "title": "ZokuZoku: Open story editor"
+        "title": "%command.openStoryEditor.title%"
       },
       {
         "command": "zokuzoku.runAllAutomations",
-        "title": "ZokuZoku: Run all automations"
+        "title": "%command.runAllAutomations.title%"
       },
       {
         "command": "zokuzoku.runAutomation",
-        "title": "ZokuZoku: Run automation..."
+        "title": "%command.runAutomation.title%"
       },
       {
         "command": "zokuzoku.clearCache",
-        "title": "ZokuZoku: Clear cache"
+        "title": "%command.clearCache.title%"
       },
       {
         "command": "zokuzoku.hachimi.reloadLocalizedData",
-        "title": "ZokuZoku: (Hachimi) Reload localized data"
+        "title": "%command.hachimi.reloadLocalizedData.title%"
       },
       {
         "command": "zokuzoku.hachimi.setLocalizedDataDir",
-        "title": "ZokuZoku: (Hachimi) Set localized data dir"
+        "title": "%command.hachimi.setLocalizedDataDir.title%"
       },
       {
         "command": "zokuzoku.hachimi.revertLocalizedDataDir",
-        "title": "ZokuZoku: (Hachimi) Revert localized data dir"
+        "title": "%command.hachimi.revertLocalizedDataDir.title%"
       },
       {
         "command": "zokuzoku.stories.refresh",
-        "title": "ZokuZoku: Refresh All Stories view",
+        "title": "%command.stories.refresh.title%",
         "icon": "$(refresh)"
       },
       {
         "command": "zokuzoku.homeStories.refresh",
-        "title": "ZokuZoku: Refresh Home Dialogues view",
+        "title": "%command.homeStories.refresh.title%",
         "icon": "$(refresh)"
       },
       {
         "command": "zokuzoku.mainStories.refresh",
-        "title": "ZokuZoku: Refresh Main Stories view",
+        "title": "%command.mainStories.refresh.title%",
         "icon": "$(refresh)"
       },
       {
         "command": "zokuzoku.lyrics.refresh",
-        "title": "ZokuZoku: Refresh Lyrics view",
+        "title": "%command.lyrics.refresh.title%",
         "icon": "$(refresh)"
       }
     ],
     "customEditors": [
       {
         "viewType": "zokuzoku.localizeDictEditor",
-        "displayName": "Localize Dict Editor",
+        "displayName": "%customEditor.localizeDict.displayName%",
         "selector": [
           {
             "filenamePattern": "*.json"
@@ -200,7 +203,7 @@
       },
       {
         "viewType": "zokuzoku.lyricsEditor",
-        "displayName": "Lyrics Editor",
+        "displayName": "%customEditor.lyrics.displayName%",
         "selector": [
           {
             "filenamePattern": "m????_lyrics.json"
@@ -210,7 +213,7 @@
       },
       {
         "viewType": "zokuzoku.mdbEditor",
-        "displayName": "MDB Editor",
+        "displayName": "%customEditor.mdb.displayName%",
         "selector": [
           {
             "filenamePattern": "{text_data,character_system_text,race_jikkyo_comment,race_jikkyo_message}*.json"
@@ -220,7 +223,7 @@
       },
       {
         "viewType": "zokuzoku.raceStoryEditor",
-        "displayName": "Race Story Editor",
+        "displayName": "%customEditor.raceStory.displayName%",
         "selector": [
           {
             "filenamePattern": "storyrace_?????????.json"
@@ -230,7 +233,7 @@
       },
       {
         "viewType": "zokuzoku.storyEditor",
-        "displayName": "Story Editor",
+        "displayName": "%customEditor.story.displayName%",
         "selector": [
           {
             "filenamePattern": "{storytimeline_?????????.json,hometimeline_?????_??_???????.json}"
@@ -240,89 +243,112 @@
       }
     ],
     "configuration": {
-      "title": "ZokuZoku",
+      "title": "%extension.displayName%",
       "properties": {
         "zokuzoku.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Must be enabled per workspace. User settings value is ignored."
+          "description": "%config.enabled.description%"
         },
         "zokuzoku.gameDataDir": {
           "type": "string",
           "default": "",
           "scope": "machine",
-          "description": "Path to the game's data directory. Usually located at C:\\Users\\[YOURUSERNAME]\\AppData\\LocalLow\\Cygames\\umamusume. Only the 'meta' file and the 'master' folder is required to be present in this directory, so if you don't want ZokuZoku to mess with the game's data dir, you can symlink them to a different folder and use that as the data directory instead."
+          "description": "%config.gameDataDir.description%"
         },
         "zokuzoku.localizeDictDump": {
           "type": "string",
           "default": "",
           "scope": "machine",
-          "description": "Path to a localize_dump.json file. You can dump the localize dict by launching the game, open the Hachimi menu and enable Translator mode in the config editor (if you haven't already), then under the Translation section, select the 'Dump localize dict' option. The dumped file will be saved in the 'hachimi' folder inside the game's install directory. You should do this every time the game updates to populate it with new data!"
+          "description": "%config.localizeDictDump.description%"
         },
         "zokuzoku.autoDownloadBundles": {
           "type": "boolean",
           "default": true,
           "scope": "machine",
-          "description": "Automatically download asset bundles that haven't been downloaded yet."
+          "description": "%config.autoDownloadBundles.description%"
         },
         "zokuzoku.sqlite3": {
           "type": "string",
           "default": "sqlite3",
-          "description": "SQLite3 command or executable path."
+          "description": "%config.sqlite3.description%"
         },
         "zokuzoku.useGameFont": {
           "type": "boolean",
           "default": true,
-          "description": "Use the game's font in editors."
+          "description": "%config.useGameFont.description%"
         },
         "zokuzoku.customFont": {
           "type": "string",
           "default": "",
           "scope": "machine",
-          "description": "Path to a custom font file to be used in editors."
+          "description": "%config.customFont.description%"
         },
         "zokuzoku.hachimiIpcAddress": {
           "type": "string",
           "default": "127.0.0.1",
           "scope": "machine",
-          "description": "The Hachimi IPC address to connect to (not including the port). By default, it connects to Hachimi running on your local machine. To use a remote device, enable IPC and \"IPC listen all\" in Hachimi, and set the address to the remote device's address."
+          "description": "%config.hachimiIpcAddress.description%"
+        },
+        "zokuzoku.decryption.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.decryption.description%"
+        },
+        "zokuzoku.decryption.metaKey": {
+          "type": "string",
+          "default": "",
+          "description": "%config.decryptionMetakey.description%",
+          "format": "password"
+        },
+        "zokuzoku.showTranslatedCharacterNames": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.showTranslatedCharacterNames.description%"
         }
       }
     }
   },
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "vscode:prepublish": "pnpm run compile",
     "compile": "pnpm run wv:build && node build.mjs",
     "watch": "run-p wv:watch ts:watch",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src",
     "package": "vsce package --no-dependencies",
     "wv:build": "cd webviews && pnpm run build",
     "wv:watch": "cd webviews && pnpm run build --watch",
-    "ts:watch": "tsc -watch -p ./"
+    "ts:watch": "tsc -watch -p ./",
+    "l10n:export": "node scripts/extract-l10n.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/follow-redirects": "^1.14.4",
     "@types/json-to-ast": "^2.1.4",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "20.x",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
     "@types/tar": "^6.1.13",
-    "@types/vscode": "^1.88.0",
+    "@types/vscode": "^1.96.0",
     "@typescript-eslint/eslint-plugin": "^8.14.0",
     "@typescript-eslint/parser": "^8.14.0",
-    "@vscode/vsce": "^3.2.1",
-    "esbuild": "^0.24.0",
+    "@vscode/l10n-dev": "^0.0.35",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.25.0",
     "esbuild-plugin-copy": "^2.1.1",
-    "eslint": "^9.15.0",
+    "eslint": "^9.18.0",
+    "glob": "^13.0.0",
+    "http-proxy-agent": "^7.0.2",
     "npm-run-all": "^4.1.5",
-    "typescript": "^5.6.3"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.54.0"
   },
   "dependencies": {
     "cricodecs": "^1.0.2",
-    "csv-parse": "^5.5.5",
-    "csv-parser": "^2.3.5",
-    "follow-redirects": "^1.15.6",
+    "csv-parse": "^6.1.0",
+    "csv-parser": "^3.2.0",
+    "follow-redirects": "^1.15.11",
     "json-to-ast": "^2.1.0",
-    "pymport": "^1.5.1",
-    "tar": "^6.2.1"
+    "pymport": "1.6.0-rc.2",
+    "tar": "^7.5.7"
   }
 }

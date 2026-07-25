@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { IPanelAction } from "../types";
+    import * as l10n from "@vscode/l10n";
 
-    export let label = "Panel";
+    export let label = l10n.t("Panel");
     export let actions: (IPanelAction | null)[] = [];
 </script>
 

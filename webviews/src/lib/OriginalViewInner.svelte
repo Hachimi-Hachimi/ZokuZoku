@@ -5,6 +5,7 @@
     import TextSlot from "./TextSlot.svelte";
     import type { ControllerMessage } from "../sharedTypes";
     import { vscode } from "../vscode";
+    import * as l10n from "@vscode/l10n";
 
     export let actions: (IPanelAction | null)[] | undefined = undefined;
 
@@ -13,7 +14,7 @@
         if (message.type == "enableVoicePlayer") {
             actions = [{
                 icon: "unmute",
-                tooltip: "Play voice clip",
+                tooltip: l10n.t("Play voice clip"),
                 onClick: () => {
                     vscode.postMessage({ type: "loadVoice" });
                 }

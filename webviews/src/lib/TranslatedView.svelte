@@ -4,6 +4,7 @@
     import { vscode } from "../vscode";
     import PanelTitle from "./PanelTitle.svelte";
     import TranslatedViewInner from "./TranslatedViewInner.svelte";
+    import * as l10n from "@vscode/l10n";
 
     export let inner = TranslatedViewInner;
 
@@ -16,7 +17,7 @@
 </script>
 
 <div class="translated-view">
-    <PanelTitle label="Translated" {actions} />
+    <PanelTitle label={l10n.t("Translated")} {actions} />
     <svelte:component this={inner} bind:actions />
 </div>
 

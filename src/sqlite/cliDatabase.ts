@@ -4,7 +4,7 @@ import { EOL } from "os";
 import { Database } from "./interfaces/database";
 const csvparser = require("csv-parser");
 
-const NO_HANDLER = (...args: any[]) => {}; // this is just an empty function to handle callbacks i dont care about
+const NO_HANDLER = (...args: any[]) => { }; // this is just an empty function to handle callbacks i dont care about
 
 const RESULT_SEPARATOR = "x3e2cv7M"; // just a random separator to recognize when there are no more rows
 
@@ -17,14 +17,14 @@ export class CliDatabase implements Database {
     private startCallback?: (err: Error) => void;
     private endCallback?: (err?: Error) => void;
     private writeCallback?: (rows: string[][], err?: Error) => void;
-    private execQueue: {sql: string, callback?: (rows: string[][], err?: Error) => void}[];
+    private execQueue: { sql: string, callback?: (rows: string[][], err?: Error) => void }[];
     private errStr: string;
     private rows: string[][];
     private busy: boolean;
     private sql: string;
 
     constructor(private command: string, private path: string, callback: (err: Error) => void) {
-        let args = ["-csv", "-header", "-bail", "-nullvalue", "NULL"];
+        const args = ["-csv", "-header", "-bail", "-nullvalue", "NULL"];
 
         this._started = false;
         this._ended = false;
@@ -33,21 +33,21 @@ export class CliDatabase implements Database {
         this.execQueue = [];
         this.busy = false;
         this.sql = "";
-        
+
         this.startCallback = callback;
 
-        this.csvParser = csvparser({separator: ',', strict: false, headers: false});
-        
+        this.csvParser = csvparser({ separator: ',', strict: false, headers: false });
+
         try {
-            this.sqliteProcess = spawn(this.command, args, {stdio: ['pipe', "pipe", "pipe" ]});
-        } catch(err) {
-            let startError = new Error("SQLite process failed to start: "+(err as Error).message);
+            this.sqliteProcess = spawn(this.command, args, { stdio: ['pipe', "pipe", "pipe"] });
+        } catch (err) {
+            const startError = new Error("SQLite process failed to start: " + (err as Error).message);
             setTimeout(() => this.onStartError(startError), 0);
             return;
         }
 
         this.sqliteProcess.once('error', (err: Error) => {
-            let startError = new Error("SQLite process failed to start: "+(err as Error).message);
+            const startError = new Error("SQLite process failed to start: " + (err as Error).message);
             this.onStartError(startError);
         });
 
@@ -57,7 +57,7 @@ export class CliDatabase implements Database {
             this._write(`select 1 from sqlite_master limit 1;${EOL}`);
             this._write(`.print ${RESULT_SEPARATOR}${EOL}`);
             this.busy = true;
-        } catch(err) {
+        } catch (err) {
             setTimeout(() => this.onStartError(err as Error), 0);
             return;
         }
@@ -69,8 +69,8 @@ export class CliDatabase implements Database {
         this.sqliteProcess.stderr!.on("data", (data) => {
             this.onError(data);
         });
-        
-        this.sqliteProcess.stdout!.pipe(this.csvParser).on("data", (data: Object) => {
+
+        this.sqliteProcess.stdout!.pipe(this.csvParser).on("data", (data: object) => {
             this.onData(data);
         });
 
@@ -90,15 +90,15 @@ export class CliDatabase implements Database {
         try {
             this._ended = true;
             this.endCallback = callback;
-            this.execQueue.push({sql: ".exit"});
+            this.execQueue.push({ sql: ".exit" });
             if (!this.busy) {
                 this.next();
             }
-        } catch(err) {
+        } catch (err) {
             //
         }
     }
-    
+
     execute(sql: string, callback?: (rows: string[][], err?: Error) => void) {
         if (this._ended) {
             if (callback) { callback([], new Error("SQLite process already ended.")); }
@@ -106,20 +106,20 @@ export class CliDatabase implements Database {
         }
 
         // trim the sql
-        sql= sql.trim();
+        sql = sql.trim();
 
         // add a space after EXPLAIN so that the result is a table (see: https://www.sqlite.org/eqp.html)
         if (sql.toLowerCase().startsWith("explain")) {
-            let pos = "explain".length;
+            const pos = "explain".length;
             sql = sql.slice(0, pos) + " " + sql.slice(pos);
         }
 
         try {
-            this.execQueue.push({sql: sql, callback: callback});
+            this.execQueue.push({ sql: sql, callback: callback });
             if (!this.busy) {
                 this.next();
             }
-        }catch(err) {
+        } catch (err) {
             //
         }
     }
@@ -135,13 +135,13 @@ export class CliDatabase implements Database {
 
     private _write(text: string) {
         if (!this.sqliteProcess) { return; }
-        
+
         // add EOL at the end
         if (!text.endsWith("\n")) { text += "\n"; }
 
         try {
             this.sqliteProcess.stdin!.write(text);
-        } catch(err) {
+        } catch (err) {
             //
         }
     }
@@ -156,7 +156,7 @@ export class CliDatabase implements Database {
         }
     }
 
-    private onExit(code: number|null, signal: string|null) {
+    private onExit(code: number | null, signal: string | null) {
         this._ended = true;
         this.csvParser.end();
         if (!this._started) {
@@ -172,20 +172,20 @@ export class CliDatabase implements Database {
 
         if (this.endCallback) { this.endCallback(); }
     }
-    
-    private onData(data: Object) {
+
+    private onData(data: object) {
         if (this.errStr) {
             return;
         }
 
         //@ts-ignore
-        let row: string[] = Object.values(data);
+        const row: string[] = Object.values(data);
 
         if (row.length === 1 && row[0] === RESULT_SEPARATOR) {
             if (!this._started) {
                 this._started = true;
             }
-            
+
             let result = this.rows;
             if (this.sql.startsWith('.')) {
                 result = [[result.map(row => row.join(' ')).join('\n')]];
@@ -199,11 +199,11 @@ export class CliDatabase implements Database {
         this.rows.push(row);
     }
 
-    private onError(data: string|Buffer) {
+    private onError(data: string | Buffer) {
         if (!data) { return; }
-        
+
         // Workaround for CentOS (and maybe other OS's) where the command throws an error at the start but everything works fine
-        if (data.toString().match(/\: \/lib64\/libtinfo\.so\.[0-9]+: no version information available \(required by /)) {
+        if (data.toString().match(/: \/lib64\/libtinfo\.so\.[0-9]+: no version information available \(required by /)) {
             return;
         }
 
@@ -211,11 +211,11 @@ export class CliDatabase implements Database {
         // last part of the error output
         if (this.errStr.endsWith("\n")) {
             // reformat the error message
-            let match = this.errStr.match(/Error: near line [0-9]+:(?: near "(.+)":)? (.+)/);
+            const match = this.errStr.match(/Error: near line [0-9]+:(?: near "(.+)":)? (.+)/);
             if (match) {
-                let token = match[1];
-                let rest = match[2];
-                this.errStr = `${token? `near "${token}": `: ``}${rest}`;
+                const token = match[1];
+                const rest = match[2];
+                this.errStr = `${token ? `near "${token}": ` : ``}${rest}`;
             }
 
             //if (this.sqliteProcess) this.sqliteProcess.kill();
@@ -225,7 +225,7 @@ export class CliDatabase implements Database {
     private next() {
         this.rows = [];
         this.sql = "";
-        let execObj = this.execQueue.shift();
+        const execObj = this.execQueue.shift();
         if (execObj) {
             this._write(execObj.sql);
             this._write(`.print ${RESULT_SEPARATOR}${EOL}`);

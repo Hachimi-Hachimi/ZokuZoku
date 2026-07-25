@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { JsonDocument, JsonEdit } from '../core';
+import * as fs from 'fs';
 
 export function getNonce(): string {
     let text = '';
@@ -11,7 +12,7 @@ export function getNonce(): string {
 }
 
 export function getAssetUris(extensionUri: vscode.Uri, webview: vscode.Webview, pageName: string) {
-    let distAssetsUri = vscode.Uri.joinPath(extensionUri, "webviews", "dist", "assets");
+    const distAssetsUri = vscode.Uri.joinPath(extensionUri, "webviews", "dist", "assets");
     return {
         scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(distAssetsUri, `${pageName}.js`)),
         styleUri: webview.asWebviewUri(vscode.Uri.joinPath(distAssetsUri, `${pageName}.css`))
@@ -19,7 +20,18 @@ export function getAssetUris(extensionUri: vscode.Uri, webview: vscode.Webview, 
 }
 
 export function getEditorHtml(extensionUri: vscode.Uri, webview: vscode.Webview, pageName: string, pageTitle: string) {
-    let { scriptUri, styleUri } = getAssetUris(extensionUri, webview, pageName);
+    const { scriptUri, styleUri } = getAssetUris(extensionUri, webview, pageName);
+
+    let l10nContents = {};
+    if (vscode.l10n.uri) {
+        try {
+            const l10nContentStr = fs.readFileSync(vscode.l10n.uri.fsPath, 'utf-8');
+            l10nContents = JSON.parse(l10nContentStr);
+        } catch (e) {
+            console.error("Failed to read l10n bundle:", e);
+        }
+    }
+
     return `
         <!doctype html>
         <html lang="en">
@@ -27,6 +39,9 @@ export function getEditorHtml(extensionUri: vscode.Uri, webview: vscode.Webview,
             <meta charset="UTF-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <title>${pageTitle}</title>
+            <script>
+                window.l10nContents = ${JSON.stringify(l10nContents)};
+            </script>
             <script type="module" nonce="${getNonce()}" src="${scriptUri}"></script>
             <link rel="stylesheet" href="${styleUri}">
         </head>

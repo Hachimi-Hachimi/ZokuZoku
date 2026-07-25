@@ -1,4 +1,6 @@
 <script lang="ts">
+    import * as l10n from "@vscode/l10n";
+
     export let src: string | undefined = undefined;
     export let hidden = false;
     export let audioElement: HTMLAudioElement | undefined;
@@ -10,10 +12,19 @@
 </script>
 
 <div class="audio-player" class:hidden>
-    <audio controls controlsList="noplaybackrate nodownload" {src} bind:this={audioElement}>
+    <audio
+        controls
+        controlsList="noplaybackrate nodownload"
+        {src}
+        bind:this={audioElement}
+    >
         <slot />
     </audio>
-    <a role="button" tabindex="0" title="Close" class="codicon codicon-chrome-close close-btn" on:click={onClose}></a>
+    <button
+        title={l10n.t("Close")}
+        class="codicon codicon-chrome-close close-btn"
+        on:click={onClose}
+    ></button>
 </div>
 
 <style>
@@ -21,6 +32,7 @@
         position: absolute;
         top: 35px;
         right: 8px;
+        z-index: 100;
         background-color: var(--vscode-editorWidget-background);
         box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
         border-bottom-left-radius: 4px;
@@ -79,6 +91,11 @@
         cursor: pointer;
         box-sizing: border-box;
         transition: 0.2s;
+        /* Reset button defaults */
+        background: none;
+        border: none;
+        color: inherit;
+        font-family: codicon;
     }
 
     .close-btn:hover {

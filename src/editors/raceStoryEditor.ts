@@ -3,16 +3,17 @@ import { getEditorHtml, makeEditForArray } from './utils';
 import { ControllerMessage, EditorMessage, IEntryTreeNode, ITreeNode, TreeNodeId } from './sharedTypes';
 import { JsonDocument } from '../core';
 import assetHelper from '../core/assetHelper';
-import { ClassIDType } from '../unityPy/enums';
 import fontHelper from './fontHelper';
 import { EditorBase } from './editorBase';
-import { AssetBundle } from '../unityPy/classes/assetBundle';
-import { Proxify } from '../pythonInterop';
 import path from 'path';
 import { HCA_KEY, ZOKUZOKU_DIR } from '../defines';
 import { ACB } from "cricodecs";
 import fs from 'fs/promises';
 import { pathExists } from '../core/utils';
+import { extractRaceStoryData } from '../pythonBridge';
+import config from '../config';
+import SQLite from '../sqlite';
+import { resolve as resolvePath } from 'path';
 
 export class RaceStoryEditorProvider extends EditorBase implements vscode.CustomTextEditorProvider {
     static readonly viewType = 'zokuzoku.raceStoryEditor';
@@ -24,7 +25,7 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
 
     resolveCustomTextEditor(document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel, _token: vscode.CancellationToken) {
         // Json document setup
-        let json = new JsonDocument<string[] | null>(document.uri, null, () => {
+        const json = new JsonDocument<string[] | null>(document.uri, null, () => {
             const subscribedKey = this.subscribedPath[0];
             const content = getDictValue(subscribedKey);
             postMessage({
@@ -39,9 +40,7 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
                 exists: content !== null
             });
         });
-        this.disposables.push(json);
-
-        let initReadPromise = json.readTextDocument().catch(_ => {});
+        const initReadPromise = json.readTextDocument().catch(_ => { });
         json.watchTextDocument(document);
         function getDictProperty(id: TreeNodeId): jsonToAst.ValueNode | undefined {
             id = Number(id);
@@ -54,12 +53,13 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
                 null :
                 valueNode.value;
         }
-        
+
         // Init webview
-        let assetInfo = RaceStoryEditorProvider.parseFilename(document.uri);
-        this.setupWebview(webviewPanel, [
+        const assetInfo = RaceStoryEditorProvider.parseFilename(document.uri);
+        const panelDisposables = this.setupWebview(webviewPanel, [
             vscode.Uri.file(assetInfo.voiceCacheDir)
         ]);
+        panelDisposables.push(json);
 
         // Messaging setup
         function postMessage(message: ControllerMessage) {
@@ -67,25 +67,25 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
         }
 
         let prevEditPromise = Promise.resolve();
-        let nodesPromise = RaceStoryEditorProvider.generateNodes(assetInfo);
-        let loadVoicePromise: Promise<{[key: string]: string}> | undefined;
-        webviewPanel.webview.onDidReceiveMessage(async (message: EditorMessage) => {
+        const nodesPromise = RaceStoryEditorProvider.generateNodes(assetInfo);
+        let loadVoicePromise: Promise<{ [key: string]: string }> | undefined;
+        panelDisposables.push(webviewPanel.webview.onDidReceiveMessage(async (message: EditorMessage) => {
             switch (message.type) {
                 case "init":
-                    postMessage({ type: "setExplorerTitle", title: "Race Story" });
+                    postMessage({ type: "setExplorerTitle", title: vscode.l10n.t("Race Story") });
                     // Just making sure to prevent data races
                     initReadPromise.finally(() => {
                         nodesPromise.then(nodes => {
                             postMessage({ type: "setNodes", nodes });
                             postMessage({ type: "enableVoicePlayer" });
                         })
-                        .catch(e => vscode.window.showErrorMessage("" + e));
+                            .catch(e => vscode.window.showErrorMessage("" + e));
                     });
                     fontHelper.onInit(webviewPanel.webview);
                     break;
-                
+
                 case "getTextSlotContent": {
-                    let key = message.entryPath[0];
+                    const key = message.entryPath[0];
                     postMessage({
                         type: "setTextSlotContent",
                         entryPath: message.entryPath,
@@ -94,9 +94,9 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
                     });
                     break;
                 }
-                
+
                 case "getExists": {
-                    let key = message.path[0];
+                    const key = message.path[0];
                     postMessage({
                         type: "setExists",
                         path: message.path,
@@ -106,20 +106,20 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
                 }
 
                 case "setTextSlotContent": {
-                    let key = Number(message.entryPath[0]);
+                    const key = Number(message.entryPath[0]);
                     if (isNaN(key)) { break; }
 
                     // Wait for previous edit to finish before applying another
                     prevEditPromise = prevEditPromise.then(async () => {
                         try {
                             if (json.ast.type !== "Array") {
-                                throw new Error("Root node is not an array");
+                                throw new Error(vscode.l10n.t("Root node is not an array"));
                             }
                             const applied = await json.applyEdit(
                                 makeEditForArray(json.ast, "", key, message.content)
                             );
                             if (!applied) {
-                                vscode.window.showErrorMessage("Failed to apply edit");
+                                vscode.window.showErrorMessage(vscode.l10n.t("Failed to apply edit"));
                             }
                         }
                         catch (e) {
@@ -131,45 +131,40 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
 
                 case "loadVoice":
                     if (!loadVoicePromise || !(await pathExists(assetInfo.voiceCacheDir))) {
-                        loadVoicePromise = new Promise(async (resolve, reject) => {
+                        loadVoicePromise = (async () => {
                             const hash = await assetHelper.getAssetHash(assetInfo.voiceAssetName);
                             if (!hash) {
-                                return reject(new Error("Voice data is not available for this story"));
+                                throw new Error(vscode.l10n.t("Voice data is not available for this story"));
                             }
-                            const acbPath = await assetHelper.loadGenericAssetByHash(hash);
-                            vscode.window.withProgress({
+                            const acbPath = await assetHelper.ensureAssetDownloaded(hash, true);
+                            return vscode.window.withProgress({
                                 location: vscode.ProgressLocation.Notification,
-                                title: "Decoding audio"
+                                title: vscode.l10n.t("Decoding audio")
                             }, async progress => {
-                                try {
-                                    const acb = await ACB.fromFile(acbPath);
-                                    const paths = await acb.decodeToWavFiles(HCA_KEY, assetInfo.voiceCacheDir, (current, total) => {
-                                        progress.report({
-                                            message: `${current}/${total}`,
-                                            increment: current ? (1 / total) * 100 : 0
-                                        });
+                                const acb = await ACB.fromFile(acbPath);
+                                const paths = await acb.decodeToWavFiles(HCA_KEY, assetInfo.voiceCacheDir, (current, total) => {
+                                    progress.report({
+                                        message: `${current}/${total}`,
+                                        increment: current ? (1 / total) * 100 : 0
                                     });
-                                    const uris = Object.fromEntries(paths.map((v, i) => [
-                                        i.toString(),
-                                        webviewPanel.webview.asWebviewUri(vscode.Uri.file(v)).toString()
-                                    ]));
-                                    resolve(uris);
-                                }
-                                catch (e) {
-                                    reject(e);
-                                }
+                                });
+                                const uris = Object.fromEntries(paths.map((v, i) => [
+                                    i.toString(),
+                                    webviewPanel.webview.asWebviewUri(vscode.Uri.file(v)).toString()
+                                ]));
+                                return uris;
                             });
-                        });
+                        })();
                     }
                     loadVoicePromise
-                    .then(uris => postMessage({ type: "loadVoice", uris }))
-                    .catch(e => vscode.window.showErrorMessage("" + e));
+                        .then(uris => postMessage({ type: "loadVoice", uris }))
+                        .catch(e => vscode.window.showErrorMessage("" + e));
                     break;
             }
-        });
+        }));
 
         // Always try to clean up voice cache, regardless if voice was loaded in *this session*
-        this.disposables.push(new vscode.Disposable(() => {
+        panelDisposables.push(new vscode.Disposable(() => {
             return fs.rm(assetInfo.voiceCacheDir, { recursive: true, force: true });
         }));
     }
@@ -180,7 +175,7 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
         const matches = filename?.match(/^(storyrace_\d{9})\.json$/);
         const assetName = matches?.[1];
         if (!assetName) {
-            throw new Error("Failed to parse asset name from filename");
+            throw new Error(vscode.l10n.t("Failed to parse asset name from filename"));
         }
 
         return {
@@ -194,49 +189,42 @@ export class RaceStoryEditorProvider extends EditorBase implements vscode.Custom
     static async generateNodes(info: RaceStoryAssetInfo): Promise<ITreeNode[]> {
         const { assetBundleName, assetName } = info;
 
-        // Read the asset
-        const env = await assetHelper.loadBundle(assetBundleName);
-        const objects = env.objects;
-        if (!objects.length) {
-            throw new Error("Failed to load asset bundle");
+        const hash = await assetHelper.getAssetHash(assetBundleName);
+        if (!hash) {
+            throw new Error(vscode.l10n.t(`Could not find hash for asset bundle: {0}`, { 0: assetBundleName }));
         }
-        let assetBundle: Proxify<AssetBundle> | undefined;
-        for (const obj of objects) {
-            if (obj.type.toJS() === ClassIDType.AssetBundle) {
-                assetBundle = obj.read<AssetBundle>(false);
-                break;
-            }
+        const assetPath = await assetHelper.ensureAssetDownloaded(hash, false);
+
+        const useDecryption = config().get<boolean>("decryption.enabled");
+        const metaPath = SQLite.instance.getMetaPath();
+        const metaKey = config().get<string>("decryption.metaKey");
+
+        if (useDecryption && !metaPath) {
+            throw new Error(vscode.l10n.t("Decryption is enabled, but the meta path is not set."));
         }
-        if (!assetBundle) {
-            throw new Error("Failed to find asset bundle object");
-        }
-        let assetInfo = assetBundle.m_Container.item(
-            `assets/_gallopresources/bundle/resources/race/storyrace/text/${assetName}.asset`
-        );
-        if (!assetInfo) {
-            throw new Error("Failed to find text asset");
-        }
-        let textAsset = assetInfo.asset.get_obj().read(false);
-        let textData = textAsset.type_tree.item("textData") as Proxify<{ text: string }[]>;
+
+        const absoluteAssetPath = resolvePath(assetPath);
+        const absoluteMetaPath = metaPath ? resolvePath(metaPath) : '';
+
+        const raceData = await extractRaceStoryData({
+            assetPath: absoluteAssetPath,
+            assetName: assetName,
+            useDecryption: useDecryption ?? false,
+            metaPath: absoluteMetaPath,
+            bundleHash: hash,
+            metaKey: metaKey
+        });
 
         const nodes: IEntryTreeNode[] = [];
-        let i = 0;
-        for (const block of textData) {
-            const id = i++;
+        for (const [i, text] of raceData.texts.entries()) {
+            const id = i;
             const prevNode = nodes[nodes.length - 1];
             if (prevNode) {
                 prevNode.next = id;
             }
-
-            const text = block.text.toJS();
             nodes.push({
-                type: "entry",
-                id,
-                name: text,
-                content: [{
-                    content: text,
-                    multiline: true
-                }],
+                type: "entry", id, name: text,
+                content: [{ content: text, multiline: true }],
                 prev: prevNode?.id
             });
         }

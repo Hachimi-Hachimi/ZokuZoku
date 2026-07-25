@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { JsonDocument, JsonEdit } from './jsonDocument';
+import { JsonDocument, type JsonEdit } from './jsonDocument';
 
 export interface LocalizedDataConfig {
     localize_dict?: string,
@@ -56,12 +56,12 @@ export class LocalizedDataManager {
     configJson: JsonDocument<LocalizedDataConfig>;
 
     private constructor() {
-        let folderUri = vscode.workspace.workspaceFolders?.[0]?.uri;
+        const folderUri = vscode.workspace.workspaceFolders?.[0]?.uri;
         if (!folderUri) {
-            throw new Error("No workspace folder.");
+            throw new Error(vscode.l10n.t('No workspace folder.'));
         }
         this.dirUri = vscode.Uri.joinPath(folderUri, "localized_data");
-        let configUri = vscode.Uri.joinPath(this.dirUri, "config.json");
+        const configUri = vscode.Uri.joinPath(this.dirUri, "config.json");
         this.configJson = new JsonDocument(
             configUri, DEFAULT_CONFIG, () => this.config = this.configJson.getValue()
         );
@@ -93,7 +93,7 @@ export class LocalizedDataManager {
         .catch(reason => {
             console.error(reason);
             vscode.window.showWarningMessage(
-                "Failed to load config.json. It will be created or overwritten automatically when it's used."
+                vscode.l10n.t('Failed to load config.json. It will be created or overwritten automatically when it\'s used.')
             );
         })
         .finally(() => {
@@ -107,9 +107,9 @@ export class LocalizedDataManager {
     }
 
     static async with(callback: (ldManager: LocalizedDataManager) => any) {
-        let ldManager = LocalizedDataManager.instance;
+        const ldManager = LocalizedDataManager.instance;
         if (!ldManager) {
-            vscode.window.showErrorMessage("ZokuZoku is inactive.");
+            vscode.window.showErrorMessage(vscode.l10n.t('ZokuZoku is inactive.'));
             return;
         }
         
@@ -156,16 +156,17 @@ export class LocalizedDataManager {
         return vscode.Uri.joinPath(this.dirUri, value, ...pathSegments);
     }
 
+    static autoCreatedUris = new Set<string>();
     async getPathUriAndOpenTextDocument<K extends keyof LocalizedDataConfig>(
         defaultFileContent: string, key: K, defaultValue: LocalizedDataConfig[K] & string, ...pathSegments: string[]
     ): Promise<vscode.TextDocument> {
-        let parentUri = await this.getPathUri(key, defaultValue, ...pathSegments.slice(0, -1));
+        const parentUri = await this.getPathUri(key, defaultValue, ...pathSegments.slice(0, -1));
         // if there are no path segments, that means it's in localized_data which is guaranteed to exist at this point
         if (pathSegments.length > 0) {
             await vscode.workspace.fs.createDirectory(parentUri);
         }
 
-        let uri = vscode.Uri.joinPath(parentUri, ...pathSegments.slice(-1));
+        const uri = vscode.Uri.joinPath(parentUri, ...pathSegments.slice(-1));
         let document: vscode.TextDocument;
         try {
             // Yes, stat AND read the document. Documents that were deleted while
@@ -174,15 +175,9 @@ export class LocalizedDataManager {
             document = await vscode.workspace.openTextDocument(uri);
         }
         catch {
-            const untitledUri = uri.with({ scheme: "untitled" });
-            document = await vscode.workspace.openTextDocument(untitledUri);
-            const edit = new vscode.WorkspaceEdit();
-            edit.insert(untitledUri, new vscode.Position(0, 0), defaultFileContent);
-            await vscode.workspace.applyEdit(edit);
-            // Workaround, without this the custom editor wouldn't load sometimes due to
-            // the lack of a content provider(?) caused by a race condition.
-            // The default text editor would open itself regardless. Annoying.
-            await vscode.window.showTextDocument(document);
+            await vscode.workspace.fs.writeFile(uri, Buffer.from(defaultFileContent));
+            LocalizedDataManager.autoCreatedUris.add(uri.toString());
+            document = await vscode.workspace.openTextDocument(uri);
         }
 
         return document;

@@ -20,6 +20,8 @@ export type CommandResponse = {
     message: string
 };
 
+const DEFAULT_ERR_MSG = vscode.l10n.t('Check Hachimi logs for more details');
+
 function call(command: Command): Promise<CommandResponse> {
     return new Promise((resolve, reject) => {
         const postData = JSON.stringify(command);
@@ -41,7 +43,7 @@ function call(command: Command): Promise<CommandResponse> {
             .on("end", () => {
                 const cmdRes: CommandResponse = JSON.parse(data);
                 if (cmdRes.type === "Error") {
-                    reject(new Error(cmdRes.message ?? "Check Hachimi logs for more details"));
+                    reject(new Error(cmdRes.message ?? DEFAULT_ERR_MSG));
                 }
                 else {
                     resolve(cmdRes);
@@ -61,7 +63,7 @@ function call(command: Command): Promise<CommandResponse> {
 async function callWithProgress(command: Command): Promise<CommandResponse> {
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Window,
-        title: "Hachimi IPC: " + command.type
+        title: vscode.l10n.t('Hachimi IPC: {0}', {0: command.type})
     }, () => call(command));
 }
 

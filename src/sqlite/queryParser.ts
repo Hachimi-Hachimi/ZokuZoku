@@ -1,7 +1,7 @@
 import { Statement, StatementType } from "./interfaces/statement";
 
 export function extractStatements(query: string): Statement[] {
-    let statements: Statement[] = [];
+    const statements: Statement[] = [];
 
     let statement: Statement|undefined;
     let isStmt = false;
@@ -12,14 +12,14 @@ export function extractStatements(query: string): Statement[] {
     let commentChar = '';
     let stringChar = '';
 
-    let queryLines = query.split(/\r?\n/);
+    const queryLines = query.split(/\r?\n/);
     for(let lineIndex=0; lineIndex<queryLines.length; lineIndex++) {
-        let line = queryLines[lineIndex];
+        const line = queryLines[lineIndex];
         for(let charIndex=0; charIndex<line.length; charIndex++) {
-            let char = line[charIndex];
-            let prevChar = charIndex>0? line[charIndex-1] : undefined;
-            let nextChar = charIndex<line.length-1? line[charIndex+1] : undefined;
-            let lastWord = (n: number) => line.substring(charIndex-n+1, charIndex+1);
+            const char = line[charIndex];
+            const prevChar = charIndex>0? line[charIndex-1] : undefined;
+            const nextChar = charIndex<line.length-1? line[charIndex+1] : undefined;
+            const lastWord = (n: number) => line.substring(charIndex-n+1, charIndex+1);
 
             if (isStmt) {
                 if (statement) { statement.sql += char; }

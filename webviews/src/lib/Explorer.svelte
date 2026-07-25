@@ -11,12 +11,13 @@
     import { findNodeByPath, getNodeTlContent, gotoNode } from "../utils";
     import type { IPanelAction } from "../types";
     import { vscode } from "../vscode";
+    import * as l10n from "@vscode/l10n";
 
     let nodes: ITreeNode[] = [];
 
     let treeView: HTMLDivElement;
     let size = 240;
-    let title = "Explorer";
+    let title = l10n.t("Explorer");
     let searchOptionsOpen = false;
     $: searchExpandIcon = searchOptionsOpen ? "chevron-down" : "chevron-left";
     let searchOptions: SearchOptions = {
@@ -236,11 +237,13 @@
         }
     }
 
+    export let extraActions: IPanelAction[] = [];
+    
     let actions: IPanelAction[];
     $: actions = [
         {
             icon: "copy",
-            tooltip: "Copy",
+            tooltip: l10n.t("Copy"),
             onClick: () => {
                 $copyingNodes = Object.assign({}, $selectedNodes);
                 $selectedNodes = {};
@@ -248,7 +251,7 @@
         },
         {
             icon: "clippy",
-            tooltip: "Paste / Fill",
+            tooltip: l10n.t("Paste / Fill"),
             onClick: async () => {
                 const src = Object.entries($copyingNodes);
                 const dest = Object.entries($selectedNodes);
@@ -259,7 +262,7 @@
 
                 const res = await vscode.showInputBox(
                     "pasteSlotCount", 
-                    "How many text slots do you want to paste? (leave empty to paste all)"
+                    l10n.t("How many text slots do you want to paste? (leave empty to paste all)")
                 );
                 if (res == null) { return; }
 
@@ -312,7 +315,7 @@
         },
         {
             icon: "clear-all",
-            tooltip: "Clear",
+            tooltip: l10n.t("Clear"),
             onClick: () => {
                 const selectedNodes = $selectedNodes;
                 for (const pathStr in selectedNodes) {
@@ -338,9 +341,10 @@
         },
         {
             icon: hideExists ? "eye" : "eye-closed",
-            tooltip: hideExists ? "Show translated entries" : "Hide translated entries",
+            tooltip: hideExists ? l10n.t("Show translated entries") : l10n.t("Hide translated entries"),
             onClick: () => hideExists = !hideExists
-        }
+        },
+        ...extraActions
     ];
 </script>
 
@@ -351,17 +355,17 @@
     <PanelTitle label={title} {actions} />
     <div class="search-container">
         <div class="search-box-container">
-            <InputBox placeholder="Search" bind:value={searchQuery} />
+            <InputBox placeholder={l10n.t("Search")} bind:value={searchQuery} />
             <div class="search-expand-btn" on:click={onSearchOptionsToggle}>
                 <div class="codicon codicon-{searchExpandIcon}"></div>
             </div>
         </div>
         {#if searchOptionsOpen}
             <div class="search-options">
-                <div><input type="checkbox" bind:checked={searchOptions.caseSensitive}>Case sensitive</div>
-                <div><input type="checkbox" bind:checked={searchOptions.regex}>Use regular expression</div>
-                <div><input type="checkbox" bind:checked={searchOptions.searchInContent}>Search in content</div>
-                <div><input type="checkbox" bind:checked={searchOptions.excludeCategoryNames}>Exclude category names</div>
+                <div><input type="checkbox" bind:checked={searchOptions.caseSensitive}>{l10n.t("Case sensitive")}</div>
+                <div><input type="checkbox" bind:checked={searchOptions.regex}>{l10n.t("Use regular expression")}</div>
+                <div><input type="checkbox" bind:checked={searchOptions.searchInContent}>{l10n.t("Search in content")}</div>
+                <div><input type="checkbox" bind:checked={searchOptions.excludeCategoryNames}>{l10n.t("Exclude category names")}</div>
             </div>
         {/if}
     </div>
@@ -374,7 +378,7 @@
     {#if searchQuery}
         <div class="tree-view" on:mousemove={onMouseMove} on:mouseup={onMouseUp}>
             {#if searchWorker}
-                <div class="searching-label">Searching...</div>
+                <div class="searching-label">{l10n.t("Searching...")}</div>
             {/if}
             {#each searchNodes as node}
                 <TreeNode {node} openAll {hideExists} />

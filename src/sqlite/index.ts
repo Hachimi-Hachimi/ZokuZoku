@@ -9,14 +9,19 @@ import { workspace, window } from "vscode";
 import { ResultSet } from "./common";
 import { executeQuery, QueryExecutionOptions } from "./queryExecutor";
 import { validateSqliteCommand } from "./sqliteCommandValidation";
-import { join } from "path";
+import { join, resolve as resolvePath } from "path";
 import config from "../config";
+import { queryEncryptedDb } from '../pythonBridge';
+import { META_KEY_GLOBAL, META_KEY_JP } from "../defines";
 
 class SQLite {
     private extensionPath: string;
     private sqliteCommand!: string;
     private mdbPath?: string;
     private metaPath?: string;
+
+    public static detectedGameVersion: "JP" | "GL" | "UNKNOWN" = "UNKNOWN";
+    private static detectedMetaKey: string | undefined;
 
     constructor(extensionPath: string, sqliteCommand: string, mdbPath?: string, metaPath?: string) {
         this.extensionPath = extensionPath;
@@ -26,16 +31,75 @@ class SQLite {
     }
 
     private static _instance?: SQLite;
+
     static init(extensionPath: string) {
-        let sqliteCommand = config().get<string>("sqlite3") ?? "sqlite3";
-        let gameDataDir = config().get<string>("gameDataDir");
-        let mdbPath = gameDataDir ? join(gameDataDir, "master", "master.mdb") : undefined;
-        let metaPath = gameDataDir ? join(gameDataDir, "meta") : undefined;
+        const sqliteCommand = config().get<string>("sqlite3") ?? "sqlite3";
+        const gameDataDir = config().get<string>("gameDataDir");
+        const mdbPath = gameDataDir ? join(gameDataDir, "master", "master.mdb") : undefined;
+        const metaPath = gameDataDir ? join(gameDataDir, "meta") : undefined;
+
         this._instance = new SQLite(extensionPath, sqliteCommand, mdbPath, metaPath);
+        this.detectedMetaKey = undefined;
+        this.detectedGameVersion = "UNKNOWN";
     }
 
     static get instance(): SQLite {
+        if (!this._instance) {
+            throw new Error("SQLite service has not been initialized.");
+        }
         return this._instance!;
+    }
+
+    getMetaPath(): string | undefined {
+        return this.metaPath;
+    }
+
+    public static async getMetaKey(): Promise<string> {
+        if (this.detectedMetaKey) {
+            return this.detectedMetaKey;
+        }
+
+        if (!this.instance.metaPath) {
+            throw new Error("Cannot get meta key: game data directory is not set.");
+        }
+        const absoluteMetaPath = resolvePath(this.instance.metaPath);
+
+        const configuredKey = config().get<string>("decryption.metaKey")?.trim();
+
+        if (configuredKey) {
+            this.detectedGameVersion = "UNKNOWN";
+            this.detectedMetaKey = configuredKey;
+            return this.detectedMetaKey;
+        }
+
+        const testQuery = "SELECT n FROM c LIMIT 1";
+
+        try {
+            await queryEncryptedDb(absoluteMetaPath, testQuery, META_KEY_JP);
+            this.detectedGameVersion = "JP";
+            this.detectedMetaKey = META_KEY_JP;
+            return this.detectedMetaKey;
+        } catch (e) {
+            const err = e as Error;
+            const isDecryptionError = err.message.includes("SQLITE_NOTADB") ||
+                                      err.message.includes("database is encrypted") ||
+                                      err.message.includes("file is not a database");
+
+            if (isDecryptionError) {
+                try {
+                    await queryEncryptedDb(absoluteMetaPath, testQuery, META_KEY_GLOBAL);
+                    this.detectedGameVersion = "GL";
+                    this.detectedMetaKey = META_KEY_GLOBAL;
+                    return this.detectedMetaKey;
+                } catch (e2) {
+                    const err2 = e2 as Error;
+                    window.showErrorMessage(`Failed to decrypt meta DB. Tried JP and GL keys. Error: ${err2.message}`);
+                    throw err2;
+                }
+            }
+            window.showErrorMessage(`Failed to query encrypted meta DB: ${err.message}`);
+            throw err;
+        }
     }
 
     async query(dbPath: string, query: string, options?: QueryExecutionOptions): Promise<ResultSet> {
@@ -57,18 +121,32 @@ class SQLite {
         return this.query(this.mdbPath, query, options);
     }
 
-    queryMeta(query: string, options?: QueryExecutionOptions): Promise<ResultSet> {
+    async queryMeta(query: string, options?: QueryExecutionOptions): Promise<ResultSet> {
         if (!this.metaPath) {
             throw new Error("Query cannot be performed because the game data directory is not set.");
         }
-        return this.query(this.metaPath, query, options);
+
+        const useDecryption = config().get<boolean>("decryption.enabled");
+        if (!useDecryption) {
+            return this.query(this.metaPath, query, options);
+        } else {
+            try {
+                const key = await SQLite.getMetaKey();
+                const absoluteMetaPath = resolvePath(this.metaPath);
+                return await queryEncryptedDb(absoluteMetaPath, query, key);
+            } catch (e) {
+                const err = e as Error;
+                window.showErrorMessage(`Failed to query encrypted meta DB: ${err.message}`);
+                throw err;
+            }
+        }
     }
 
     setSqliteCommand(sqliteCommand: string) {
         try {
             this.sqliteCommand = validateSqliteCommand(sqliteCommand, this.extensionPath);
         } catch (e) {
-            let message = (e as Error).message;
+            const message = (e as Error).message;
             console.error(message);
             window.showErrorMessage(message);
             this.sqliteCommand = "";
@@ -95,20 +173,6 @@ export const MDB_TABLE_COLUMNS: {[K in MdbTableName]: string[]} = {
     "race_jikkyo_comment": [ "id", "message" ],
     "race_jikkyo_message": [ "id", "message" ]
 };
-
-
-export function buildQueryExecutionOptions(setupDatabaseConfig: { [dbPath: string]: { sql: string[]; } }, dbPath: string): QueryExecutionOptions {
-    if (!workspace.workspaceFolders) {
-        return { sql: [] };
-    }
-    for (let configDbPath in setupDatabaseConfig) {
-        if (join(workspace.workspaceFolders[0].uri.fsPath, configDbPath) === dbPath) {
-            let sql = setupDatabaseConfig[configDbPath].sql;
-            return { sql };
-        }
-    }
-    return { sql: [] };
-}
 
 export interface QueryResult {resultSet?: ResultSet; error?: Error; }
 

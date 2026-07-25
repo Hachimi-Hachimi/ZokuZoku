@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { PyObject } from 'pymport';
 import json from '../pythonJson';
+import { whenReady } from '../extensionContext';
 
 function zk() {
     let mdbTextData: {[key: string]: {[key: string]: string}} | undefined;
@@ -15,11 +16,11 @@ function zk() {
     function getFullPath(relPath: string) {
         const localizedDataDir = LocalizedDataManager.instance?.dirUri.fsPath;
         if (!localizedDataDir) {
-            throw new Error("ZokuZoku has not been activated");
+            throw new Error(vscode.l10n.t('ZokuZoku has not been activated'));
         }
         const fullPath = path.join(localizedDataDir, relPath);
         if (fullPath[localizedDataDir.length] !== path.sep || !fullPath.startsWith(localizedDataDir)) {
-            throw new Error("Invalid file path");
+            throw new Error(vscode.l10n.t('Invalid file path'));
         }
         return fullPath;
     }
@@ -27,7 +28,7 @@ function zk() {
     function getDictFullPath(relPath: string) {
         const fullPath = getFullPath(relPath);
         if (!fullPath.endsWith(".json")) {
-            throw new Error("Invalid file path");
+            throw new Error(vscode.l10n.t('Invalid file path'));
         }
         return fullPath;
     }
@@ -120,6 +121,7 @@ function zk() {
 }
 
 async function loadMdbTextData(tableName: "text_data" | "character_system_text") {
+    await whenReady;
     const rows = await SQLite.instance.loadMdbTable(tableName);
     const res: {[key: string]: {[key: string]: string}} = {};
 
@@ -136,6 +138,7 @@ async function loadMdbTextData(tableName: "text_data" | "character_system_text")
 }
 
 async function loadMdbRaceJikkyo(tableName: "race_jikkyo_comment" | "race_jikkyo_message") {
+    await whenReady;
     const rows = await SQLite.instance.loadMdbTable(tableName);
     const res: {[key: string]: string} = {};
 

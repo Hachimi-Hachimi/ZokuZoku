@@ -6,12 +6,13 @@
     import StorySplitView from "./StorySplitView.svelte";
     import { originalPreview } from "./stores";
     import { vscode } from "../vscode";
+    import * as l10n from "@vscode/l10n";
 
     const preview = originalPreview;
     export const actions: (IPanelAction | null)[] = [
         {
             icon: "run-all",
-            tooltip: "Goto block (IPC - in game)",
+            tooltip: l10n.t("Goto block (IPC - in game)"),
             onClick: () => !isNaN(+$currentPath[0]) && vscode.postMessage({
                 type: "callHachimiIpc",
                 command: {
@@ -23,7 +24,7 @@
         },
         {
             icon: "unmute",
-            tooltip: "Play voice clip",
+            tooltip: l10n.t("Play voice clip"),
             onClick: () => {
                 vscode.postMessage({ type: "loadVoice" });
             }
@@ -33,12 +34,12 @@
 
         {
             icon: "comment",
-            tooltip: "Dialogue preview",
+            tooltip: l10n.t("Dialogue preview"),
             onClick: () => $preview = $preview == "dialogue" ? null : "dialogue"
         },
         {
             icon: "book",
-            tooltip: "Story preview",
+            tooltip: l10n.t("Story preview"),
             onClick: () => $preview = $preview == "story" ? null : "story"
         }
     ];

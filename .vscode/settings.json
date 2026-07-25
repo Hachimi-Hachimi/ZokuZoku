@@ -1,18 +1,30 @@
-// Place your settings in this file to overwrite default and user settings.
 {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[typescript]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    "[svelte]": {
+        "editor.defaultFormatter": "svelte.svelte-vscode"
+    },
     "files.exclude": {
-        "out": false // set this to true to hide the "out" folder with the compiled JS files
+        "out": false,
+        "webviews/dist": true
     },
     "search.exclude": {
-        "out": true // set this to false to include "out" folder in search results
+        "out": true,
+        "webviews/dist": true,
+        "**/.pnpm-store": true
     },
-    // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
     "typescript.tsc.autoDetect": "off",
-    // Genuinely annoying warnings that serves no purpose in a webview
     "svelte.plugin.svelte.compilerWarnings": {
         "a11y-no-static-element-interactions": "ignore",
         "a11y-click-events-have-key-events": "ignore",
         "a11y-missing-attribute": "ignore",
         "a11y-missing-content": "ignore"
-    }
+    },
+    "zokuzoku.enabled": true
 }

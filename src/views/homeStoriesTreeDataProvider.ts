@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import SQLite from '../sqlite';
 import { LocalizedDataManager, utils } from '../core';
 import RefreshableTreeDataProviderBase from './refreshableTreeDataProviderBase';
+import { whenReady } from '../extensionContext';
 
 function queryCategories() {
     return SQLite.instance.queryMeta(
@@ -73,6 +74,8 @@ export default class HomeStoriesTreeDataProvider extends RefreshableTreeDataProv
     }
 
     async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
+        await whenReady;
+
         const items: vscode.TreeItem[] = [];
         if (!element) {
             // Categories
@@ -111,7 +114,7 @@ export default class HomeStoriesTreeDataProvider extends RefreshableTreeDataProv
                     for (const [ charaId ] of result[0].rows) {
                         const itemId = `${categoryId}/${groupId}/${charaId}`;
                         let label = charaId;
-                        let name = await getCharaName(charaId);
+                        const name = await getCharaName(charaId);
                         if (name) {
                             label += ` ${name}`;
                         }
@@ -132,12 +135,12 @@ export default class HomeStoriesTreeDataProvider extends RefreshableTreeDataProv
 
                         const dictPath = await ldManager.getPathUri("assets_dir", undefined,
                             "home", "data", categoryId, groupId, `hometimeline_${categoryId}_${groupId}_${storyId}.json`);
-                        const dictExists = dictPath !== undefined && await utils.uriExists(dictPath);
+                        const status = await utils.getEntryStatus(dictPath);
 
                         items.push({
                             id: itemId,
                             tooltip: itemId,
-                            label: utils.makeActiveStatusLabel(storyId.slice(4), dictExists),
+                            label: utils.makeStatusLabel(storyId.slice(4), status),
                             command: {
                                 title: "ZokuZoku: Open story editor",
                                 command: "zokuzoku.openStoryEditor",

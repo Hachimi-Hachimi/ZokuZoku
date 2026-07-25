@@ -6,6 +6,7 @@
     import AudioPlayerWidget from "../lib/AudioPlayerWidget.svelte";
     import type { ControllerMessage, TreeNodeId } from "../sharedTypes";
     import { currentPath } from "../stores";
+    import * as l10n from "@vscode/l10n";
 
     export let inner = OriginalViewInner;
 
@@ -47,7 +48,7 @@
 
 <div class="original-view" style="height: {size}px;">
     <Sash horizontal bind:size maxSize={1000} />
-    <PanelTitle label="Original" {actions} />
+    <PanelTitle label={l10n.t("Original")} {actions} />
     <svelte:component this={inner} bind:actions />
     <AudioPlayerWidget bind:audioElement bind:hidden={audioPlayerHidden} src={voiceSrc} />
 </div>

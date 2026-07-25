@@ -4,6 +4,7 @@
     import { findNodeByPath, gotoNode } from "../utils";
     import { vscode } from "../vscode";
     import TextSlotInner from "./TextSlotInner.svelte";
+    import * as l10n from "@vscode/l10n";
 
     export let inner = TextSlotInner;
     export let content: string | null = null;
@@ -18,7 +19,7 @@
     export let tooltip = "";
 
     if (link) {
-        tooltip = tooltip ? tooltip + " (Ctrl + Click to follow link...)" : "Ctrl + Click to follow link...";
+        tooltip = tooltip ? tooltip + l10n.t(" (Ctrl + Click to follow link...)") : l10n.t("Ctrl + Click to follow link...");
     }
 
     let focused = false;
@@ -44,7 +45,7 @@
             });
             vscode.postMessage({
                 type: "showMessage",
-                content: `Slot ${index} has been set to an empty string.`
+                content: l10n.t("Slot {0} has been set to an empty string.", index)
             });
         }
     }

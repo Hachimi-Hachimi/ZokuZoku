@@ -14,12 +14,12 @@ function downloadToStream(url: string | URL, title: string, output: Writable): T
         return new Promise((resolve, reject) => {
             const req = https.get(url, { maxBodyLength: Infinity }, res => {
                 if (res.statusCode !== 200) {
-                    reject(new Error("Server returned status code: " + res.statusCode));
+                    reject(new Error(vscode.l10n.t('Server returned status code: {0}', {0: res.statusCode})));
                     return;
                 }
 
-                let clHeader = res.headers['content-length'];
-                let contentLength = clHeader ? parseInt(clHeader, 10) : 100000;
+                const clHeader = res.headers['content-length'];
+                const contentLength = clHeader ? parseInt(clHeader, 10) : 100000;
 
                 res.on("data", c => {
                     const chunk = c as Buffer;
@@ -43,7 +43,7 @@ function downloadToStream(url: string | URL, title: string, output: Writable): T
 
                 token.onCancellationRequested(() => {
                     res.destroy();
-                    reject(new Error("Download cancelled by user"));
+                    reject(new Error(vscode.l10n.t('Download cancelled by user')));
                 });
             })
             .on("error", e => {

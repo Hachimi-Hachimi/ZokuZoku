@@ -3,6 +3,7 @@
     import { copyingNodes, currentNav, currentPath, currentSiblings, currentTextSlots, nodeStates, selectedNodes, type NodeState } from "../stores";
     import { vscode } from "../vscode";
     import IntersectionObserver from "svelte-intersection-observer";
+    import * as l10n from "@vscode/l10n";
 
     export let node: ITreeNode;
     export let parentPath: TreeNodeId[] = [];
@@ -188,7 +189,7 @@
                 <svelte:self node={{
                     type: "dummy",
                     id: "__prevEntries",
-                    name: `Previous ${maxChildren} entries...`,
+                    name: l10n.t("Previous {0} entries...", maxChildren),
                     icon: "arrow-up"
                 }} parentPath={path} on:click={prevEntries} />
             {/if}
@@ -201,7 +202,7 @@
                 <svelte:self node={{
                     type: "dummy",
                     id: "__nextEntries",
-                    name: `Next ${maxChildren} entries...`,
+                    name: l10n.t("Next {0} entries...", maxChildren),
                     icon: "arrow-down"
                 }} parentPath={path} on:click={nextEntries} />
             {/if}

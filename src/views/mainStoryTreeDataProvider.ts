@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import SQLite from '../sqlite';
 import { LocalizedDataManager, utils } from '../core';
 import RefreshableTreeDataProviderBase from './refreshableTreeDataProviderBase';
+import { whenReady } from '../extensionContext';
 
 function queryAllChapters() {
     return SQLite.instance.queryMdb('SELECT DISTINCT "part_id" FROM main_story_data');
@@ -70,12 +71,14 @@ export default class MainStoriesTreeDataProvider extends RefreshableTreeDataProv
     }
 
     async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
+        await whenReady;
+
         const items: vscode.TreeItem[] = [];
         if (!element) {
             // Acts
-            let result = await queryAllChapters();
-            let chapterRows = result[0].rows;
-            let lastChapter = chapterRows?.[chapterRows.length - 1]?.[0];
+            const result = await queryAllChapters();
+            const chapterRows = result[0].rows;
+            const lastChapter = chapterRows?.[chapterRows.length - 1]?.[0];
             if (lastChapter !== undefined) {
                 let actCount = Math.floor(+lastChapter / 10);
                 if (actCount < 1) { actCount = 1; }
@@ -84,7 +87,7 @@ export default class MainStoriesTreeDataProvider extends RefreshableTreeDataProv
                     items.push({
                         id: i.toString(),
                         tooltip: i.toString(),
-                        label: "Act " + i,
+                        label: vscode.l10n.t("Act {0}", i),
                         collapsibleState: vscode.TreeItemCollapsibleState.Collapsed
                     });
                 }
@@ -100,7 +103,7 @@ export default class MainStoriesTreeDataProvider extends RefreshableTreeDataProv
                     const chapterNames = await utils.getTextDataCategory(93);
                     const result = await queryChapters(+actNum);
 
-                    for (let [ chapterId ] of result[0].rows) {
+                    for (const [ chapterId ] of result[0].rows) {
                         const itemId = `${actNum}/${chapterId}`;
                         items.push({
                             id: itemId,
@@ -116,7 +119,7 @@ export default class MainStoriesTreeDataProvider extends RefreshableTreeDataProv
                     const episodeNames = await utils.getTextDataCategory(94);
                     const result = await queryEpisodes(+chapterId);
 
-                    for (let [ id, episodeIndex ] of result[0].rows) {
+                    for (const [ id, episodeIndex ] of result[0].rows) {
                         const itemId = `${actNum}/${chapterId}/${id}`;
                         items.push({
                             id: itemId,
@@ -168,7 +171,7 @@ export default class MainStoriesTreeDataProvider extends RefreshableTreeDataProv
 
                             default: continue;
                         }
-                        const dictExists = dictPath !== undefined && await utils.uriExists(dictPath);
+                        const status = await utils.getEntryStatus(dictPath);
 
                         noTranslatables = false;
 
@@ -176,7 +179,7 @@ export default class MainStoriesTreeDataProvider extends RefreshableTreeDataProv
                         items.push({
                             id: itemId,
                             tooltip: itemId,
-                            label: utils.makeActiveStatusLabel(`Part ${(i / 2) + 1}`, dictExists),
+                            label: utils.makeStatusLabel(`Part ${(i / 2) + 1}`, status),
                             iconPath: new vscode.ThemeIcon(iconId),
                             command
                         });
@@ -187,7 +190,7 @@ export default class MainStoriesTreeDataProvider extends RefreshableTreeDataProv
                         items.push({
                             id: itemId,
                             tooltip: itemId,
-                            label: "No translatable parts."
+                            label: vscode.l10n.t("No translatable parts.")
                         });
                     }
                     break;

@@ -1,0 +1,11 @@
+{
+    "ordinal_types": [],
+    "months": [],
+    "use_text_wrapper": false,
+    "auto_adjust_story_clip_length": false,
+    "text_common_allow_overflow": false,
+    "now_loading_comic_title_ellipsis": false,
+    "remove_ruby": false,
+    "text_data_dict": "text_data_dict.json",
+    "race_jikkyo_comment_dict": "race_jikkyo_comment_dict.json"
+}

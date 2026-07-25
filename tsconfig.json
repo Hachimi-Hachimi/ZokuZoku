@@ -8,11 +8,17 @@
         ],
         "sourceMap": true,
         "rootDir": "src",
-        "strict": true,   /* enable all strict type-checking options */
+        "strict": true,
         "noFallthroughCasesInSwitch": true,
-        "noImplicitOverride": true
+        "noImplicitOverride": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "verbatimModuleSyntax": true
     },
     "exclude": [
+        "node_modules",
+        "out",
         "webviews"
     ]
 }

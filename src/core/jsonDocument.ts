@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import jsonToAst from "json-to-ast";
-import { utils } from '.';
+import * as utils from './utils.js';
 
 export type JsonEdit<T> =
     (T extends Array<infer R> ? JsonArrayEdit<R> :
@@ -52,6 +52,7 @@ export class JsonDocument<T> extends vscode.Disposable {
     uri: vscode.Uri;
     defaultData: T; // can be null
     private readSuccessful = false;
+    get isReadSuccessful() { return this.readSuccessful; }
 
     fsWatcher?: vscode.FileSystemWatcher;
     onDidChangeTextDocument?: vscode.Disposable;
@@ -75,7 +76,7 @@ export class JsonDocument<T> extends vscode.Disposable {
         this.astObjectsProps.clear();
         this.visit(node => {
             if (node.type === "Object") {
-                let props: {[key: string]: jsonToAst.PropertyNode} = {};
+                const props: {[key: string]: jsonToAst.PropertyNode} = {};
                 for (const child of node.children) {
                     props[child.key.value] = child;
                 }
@@ -84,11 +85,14 @@ export class JsonDocument<T> extends vscode.Disposable {
         });
     }
 
-    constructor(uri: vscode.Uri, defaultData: T, onChange?: () => void) {
+    private formatter?: (data: T) => string;
+
+    constructor(uri: vscode.Uri, defaultData: T, onChange?: () => void, formatter?: (data: T) => string) {
         super(() => this.onDispose());
 
         this.uri = uri;
         this.defaultData = defaultData;
+        this.formatter = formatter;
         if (onChange) {
             this.onDidChange(onChange);
         }
@@ -105,8 +109,8 @@ export class JsonDocument<T> extends vscode.Disposable {
 
     watchFileSystem() {
         // Detect file changes in fs (will not trigger when editing, only on save)
-        let pattern = new vscode.RelativePattern(this.uri, "*");
-        let watcher = vscode.workspace.createFileSystemWatcher(pattern);
+        const pattern = new vscode.RelativePattern(this.uri, "*");
+        const watcher = vscode.workspace.createFileSystemWatcher(pattern);
         watcher.onDidCreate(() => this.readFile().catch(_ => {}));
         watcher.onDidChange(() => this.readFile().catch(_ => {}));
         watcher.onDidDelete(() => this.loadDefault());
@@ -133,8 +137,8 @@ export class JsonDocument<T> extends vscode.Disposable {
 
     async readFile() {
         try {
-            let buffer = await vscode.workspace.fs.readFile(this.uri);
-            let json = new TextDecoder().decode(buffer);
+            const buffer = await vscode.workspace.fs.readFile(this.uri);
+            const json = new TextDecoder().decode(buffer);
             this.ast = jsonToAst(json);
             this.readSuccessful = true;
         }
@@ -147,7 +151,7 @@ export class JsonDocument<T> extends vscode.Disposable {
 
     async readTextDocument() {
         try {
-            let document = await vscode.workspace.openTextDocument(this.uri);
+            const document = await vscode.workspace.openTextDocument(this.uri);
             this.ast = jsonToAst(document.getText());
             this.readSuccessful = true;
         }
@@ -180,8 +184,8 @@ export class JsonDocument<T> extends vscode.Disposable {
     }
 
     private nodeReplace(wsEdit: vscode.WorkspaceEdit, node: jsonToAst.ASTNode, value: any, indentLevel: number) {
-        let indent = " ".repeat(indentLevel * BASE_INDENT);
-        let json = utils.addIndent(JSON.stringify(value, null, BASE_INDENT), indent);
+        const indent = " ".repeat(indentLevel * BASE_INDENT);
+        const json = utils.addIndent(JSON.stringify(value, null, BASE_INDENT), indent);
         wsEdit.replace(this.uri, rangeConv(node.loc!), json);
     }
 
@@ -250,7 +254,7 @@ export class JsonDocument<T> extends vscode.Disposable {
             // if it was not found, i = children.length -> target = undefined
         }
 
-        let target = node.children.at(i);
+        const target = node.children.at(i);
         if (!target) { return; }
 
         const children = node.children;
@@ -286,7 +290,7 @@ export class JsonDocument<T> extends vscode.Disposable {
 
     makeEdit(edit: JsonEdit<T>, wsEdit = new vscode.WorkspaceEdit, node = this.ast, indentLevel = 0): vscode.WorkspaceEdit {
         if (!this.readSuccessful) {
-            throw new Error("Document has not been read successfully, refusing to make edit");
+            throw new Error(vscode.l10n.t('Document has not been read successfully, refusing to make edit'));
         }
 
         if (isObjectOrArrayEdit(edit)) {
@@ -302,14 +306,14 @@ export class JsonDocument<T> extends vscode.Disposable {
                 case "object":
                     if (node.type !== "Object") {
                         console.error(node);
-                        throw new Error("JSON node type differs from schema");
+                        throw new Error(vscode.l10n.t('JSON node type differs from schema'));
                     }
                     switch (edit.action) {
                         case "update": {
                             const property = edit.property;
                             const props = this.astObjectsProps.get(node);
                             if (!props) {
-                                throw new Error("Attempted to perform object update on non-object node");
+                                throw new Error(vscode.l10n.t('Attempted to perform object update on non-object node'));
                             }
                             const stringKey = property.key.toString();
                             const propNode = props[stringKey];
@@ -324,7 +328,7 @@ export class JsonDocument<T> extends vscode.Disposable {
                                         setValue = edit.values;
                                     }
                                     else {
-                                        throw new Error("Attempted to perform update on missing property");
+                                        throw new Error(vscode.l10n.t('Attempted to perform update on missing property'));
                                     }
                                 }
                                 else {
@@ -345,7 +349,7 @@ export class JsonDocument<T> extends vscode.Disposable {
                 case "array":
                     if (node.type !== "Array") {
                         console.error(node);
-                        throw new Error("JSON node type differs from schema");
+                        throw new Error(vscode.l10n.t('JSON node type differs from schema'));
                     }
                     switch (edit.action) {
                         case "push":
@@ -353,9 +357,9 @@ export class JsonDocument<T> extends vscode.Disposable {
                             break;
                         
                         case "update": {
-                            let childNode = node.children[edit.index];
+                            const childNode = node.children[edit.index];
                             if (!childNode) {
-                                throw new Error("Attempted to perform update on missing array element");
+                                throw new Error(vscode.l10n.t('Attempted to perform update on missing array element'));
                             }
                             this.makeEdit(edit.value, wsEdit, childNode, indentLevel + 1);
                             break;
@@ -386,10 +390,10 @@ export class JsonDocument<T> extends vscode.Disposable {
         }
         catch (e) {
             if (!options.force) { throw e; }
-            document = await this.writeTextDocument();
+            document = await this.writeTextDocument({ force: true });
         }
         if (!this.readSuccessful && options.force) {
-            document = await this.writeTextDocument();
+            document = await this.writeTextDocument({ force: true });
             // The default value is serialized the same way it was parsed, so a safe edit operation is guaranteed
             this.readSuccessful = true;
         }
@@ -397,17 +401,74 @@ export class JsonDocument<T> extends vscode.Disposable {
         if (options.save && !document) {
             document = await vscode.workspace.openTextDocument(this.uri);
         }
-        let res = await vscode.workspace.applyEdit(this.makeEdit(data));
+
+        if (this.formatter) {
+            const newData = JsonDocument.applyJsonEdit(this.getValue(), data);
+            const edit = new vscode.WorkspaceEdit();
+            const fullText = this.formatter(newData);
+            
+            if (!document) {
+                document = await vscode.workspace.openTextDocument(this.uri);
+            }
+            
+            edit.replace(this.uri, new vscode.Range(0, 0, document.lineCount, 0), fullText);
+            const res = await vscode.workspace.applyEdit(edit);
+            if (res) {
+                this.ast = jsonToAst(fullText);
+            }
+            if (options.save) {
+                await document.save();
+            }
+            return res;
+        }
+
+        const res = await vscode.workspace.applyEdit(this.makeEdit(data));
         if (options.save) {
             document!.save();
         }
         return res;
     }
 
+    private static applyJsonEdit(data: any, edit: JsonEdit<any>): any {
+        if (!isObjectOrArrayEdit(edit)) {
+            return edit;
+        }
+
+        const e = edit as (JsonObjectEdit<any> | JsonArrayEdit<any>);
+
+        switch (e.action) {
+            case "set": return e.values;
+        }
+
+        if (e.type === "object") {
+            const obj = { ...(data || {}) };
+            switch (e.action) {
+                case "update":
+                    obj[e.property.key] = this.applyJsonEdit(obj[e.property.key], e.property.value);
+                    return obj;
+                case "delete":
+                    delete obj[e.key];
+                    return obj;
+            }
+        } else if (e.type === "array") {
+            const arr = [...(Array.isArray(data) ? data : [])];
+            switch (e.action) {
+                case "push": return [...arr, ...e.values];
+                case "update":
+                    arr[e.index] = this.applyJsonEdit(arr[e.index], e.value);
+                    return arr;
+                case "delete":
+                    arr.splice(e.index, 1);
+                    return arr;
+            }
+        }
+        return data;
+    }
+
     static getValue(node: jsonToAst.ValueNode): any {
         switch (node.type) {
             case "Object": {
-                let value: {[key: string]: any} = {};
+                const value: {[key: string]: any} = {};
                 for (const child of node.children) {
                     value[child.key.value] = this.getValue(child.value);
                 }
@@ -415,7 +476,7 @@ export class JsonDocument<T> extends vscode.Disposable {
             }
             
             case "Array": {
-                let value: any[] = [];
+                const value: any[] = [];
                 for (const child of node.children) {
                     value.push(this.getValue(child));
                 }
@@ -431,21 +492,32 @@ export class JsonDocument<T> extends vscode.Disposable {
         return JsonDocument.getValue(this.ast);
     }
 
-    async writeTextDocument(): Promise<vscode.TextDocument> {
+    async writeTextDocument(options: { force?: boolean } = {}): Promise<vscode.TextDocument> {
+        let fileExists = false;
         try {
             await vscode.workspace.fs.stat(this.uri);
+            fileExists = true;
         }
         catch {
-            let edit = new vscode.WorkspaceEdit;
+            // File doesn't exist, safe to create
+        }
+
+        if (fileExists && !this.readSuccessful && !options.force) {
+            throw new Error(vscode.l10n.t('Document has not been read successfully and file exists. Refusing to overwrite to prevent data loss.'));
+        }
+
+        if (!fileExists) {
+            const edit = new vscode.WorkspaceEdit;
             edit.createFile(this.uri);
             await vscode.workspace.applyEdit(edit);
         }
-        let document = await vscode.workspace.openTextDocument(this.uri);
-        let edit = new vscode.WorkspaceEdit;
+        const document = await vscode.workspace.openTextDocument(this.uri);
+        const edit = new vscode.WorkspaceEdit;
+        const text = this.formatter ? this.formatter(this.getValue()) : JSON.stringify(this.getValue(), null, BASE_INDENT);
         edit.replace(
             this.uri,
             new vscode.Range(0, 0, document.lineCount, 0),
-            JSON.stringify(this.getValue(), null, BASE_INDENT)
+            text
         );
         await vscode.workspace.applyEdit(edit);
         return document;

@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import SQLite from '../sqlite';
 import { LocalizedDataManager, utils } from '../core';
 import RefreshableTreeDataProviderBase from './refreshableTreeDataProviderBase';
+import { whenReady } from '../extensionContext';
+import config from '../config';
 
 function queryCategories() {
     return SQLite.instance.queryMeta(
@@ -31,37 +33,66 @@ enum TreeLevel {
 }
 
 const categoryNames: {[key: string]: string} = {
-    "02": "Main Stories",
-    "04": "Character Stories",
-    "40": "Scenario Training Events",
-    "50": "Character Training Events"
+    "00": vscode.l10n.t("> Short Episodes"),
+    "01": vscode.l10n.t("> Tutorials"),
+    "02": vscode.l10n.t("> Main Story"),
+    "04": vscode.l10n.t("> Umamusume Stories"),
+    "08": vscode.l10n.t("> Scenario Intros"),
+    "09": vscode.l10n.t("> Story Events"),
+    "10": vscode.l10n.t("> Anniv. Stories"),
+    "11": vscode.l10n.t("> G1 Outfit Episodes"),
+    "12": vscode.l10n.t("> New Year Short Episodes"),
+    "13": vscode.l10n.t("Kirari Magic Show"),
+    "14": vscode.l10n.t("The White Era"),
+    "40": vscode.l10n.t("> Scenario Career Events"),
+    "50": vscode.l10n.t("> Umamusume Career Events"),
+    "80": vscode.l10n.t("> Support Card Events (R)"),
+    "82": vscode.l10n.t("> Support Card Events (SR)"),
+    "83": vscode.l10n.t("> Support Card Events (SSR)")
 };
 
-async function getGroupName(categoryId: string, groupId: string): Promise<string | undefined> {
-    switch (+categoryId) {
-        case 4:
-        case 50: {
-            const characterNames = await utils.getTextDataCategoryCached(6);
-            return characterNames[+groupId];
-        }
-        case 40:
-            return (await utils.getTextDataCategory(119))[+groupId]?.replaceAll("\\n", " ");
-    }
-}
 
-async function getStoryName(categoryId: string, storyId: string) {
-    switch (+categoryId) {
-        case 4:
-            return (await utils.getTextDataCategory(92))[+storyId];
-    }
-
-    // Training events span across multiple categories
-    return (await utils.getTextDataCategoryCached(181))[+storyId];
-}
 
 export default class StoriesTreeDataProvider extends RefreshableTreeDataProviderBase implements vscode.TreeDataProvider<vscode.TreeItem> {
     private static _instance?: StoriesTreeDataProvider;
     static get instance(): StoriesTreeDataProvider | undefined { return this._instance; }
+
+    override refresh() {
+        utils.invalidateTranslatedTextDataCache();
+        super.refresh();
+    }
+
+    private async getGroupName(categoryId: string, groupId: string): Promise<string | undefined> {
+        switch (+categoryId) {
+            case 4:
+            case 50: {
+                if (config().get<boolean>("showTranslatedCharacterNames")) {
+                    const translatedData = await utils.getTranslatedTextData();
+                    if (translatedData && translatedData["6"]) {
+                        const translatedName = translatedData["6"][groupId];
+                        if (translatedName) {
+                            return translatedName;
+                        }
+                    }
+                }
+
+                const characterNames = await utils.getTextDataCategoryCached(6);
+                return characterNames[+groupId];
+            }
+            case 40:
+                return (await utils.getTextDataCategory(119))[+groupId]?.replaceAll("\\n", " ");
+        }
+    }
+
+    private async getStoryName(categoryId: string, storyId: string) {
+        switch (+categoryId) {
+            case 4:
+                return (await utils.getTextDataCategory(92))[+storyId];
+        }
+    
+        // Training events span across multiple categories
+        return (await utils.getTextDataCategoryCached(181))[+storyId];
+    }
 
     static register(context: vscode.ExtensionContext): vscode.Disposable {
         const treeDataProvider = new StoriesTreeDataProvider;
@@ -86,13 +117,15 @@ export default class StoriesTreeDataProvider extends RefreshableTreeDataProvider
     }
 
     async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
+        await whenReady;
+
         const items: vscode.TreeItem[] = [];
         if (!element) {
             // Categories
             const result = await queryCategories();
             for (const [ id ] of result[0].rows) {
                 let label = id;
-                let name = categoryNames[id];
+                const name = categoryNames[id];
                 if (name) {
                     label += ` ${name}`;
                 }
@@ -115,7 +148,7 @@ export default class StoriesTreeDataProvider extends RefreshableTreeDataProvider
                     for (const [ groupId ] of result[0].rows) {
                         const itemId = `${categoryId}/${groupId}`;
                         let label = groupId;
-                        let name = await getGroupName(categoryId, groupId);
+                        const name = await this.getGroupName(categoryId, groupId);
                         if (name) {
                             label += ` ${name}`;
                         }
@@ -134,19 +167,19 @@ export default class StoriesTreeDataProvider extends RefreshableTreeDataProvider
                     for (const [ storyId ] of result[0].rows) {
                         const itemId = `${categoryId}/${groupId}/${storyId}`;
                         let label = storyId.slice(6);
-                        let name = await getStoryName(categoryId, storyId);
+                        const name = await this.getStoryName(categoryId, storyId);
                         if (name) {
                             label += ` ${name}`;
                         }
 
                         const dictPath = await ldManager.getPathUri("assets_dir", undefined,
                             "story", "data", categoryId, groupId, `storytimeline_${storyId}.json`);
-                        const dictExists = dictPath !== undefined && await utils.uriExists(dictPath);
+                        const status = await utils.getEntryStatus(dictPath);
 
                         items.push({
                             id: itemId,
                             tooltip: itemId,
-                            label: utils.makeActiveStatusLabel(label, dictExists),
+                            label: utils.makeStatusLabel(label, status),
                             command: {
                                 title: "ZokuZoku: Open story editor",
                                 command: "zokuzoku.openStoryEditor",

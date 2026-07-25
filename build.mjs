@@ -21,10 +21,16 @@ await esbuild.build({
     },
     plugins: [
         copy({
-            assets: {
-                from: ['./node_modules/cricodecs/hca-wasm/pkg/hca_wasm_bg.wasm'],
-                to: ['.'],
-            }
+            assets: [
+                {
+                    from: ['./node_modules/cricodecs/hca-wasm/pkg/hca_wasm_bg.wasm'],
+                    to: ['.'],
+                },
+                {
+                    from: ['./src/py/py_bridge.py'],
+                    to: ['./py/py_bridge.py'],
+                }
+            ]
         })
     ]
 });

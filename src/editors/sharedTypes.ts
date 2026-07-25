@@ -84,6 +84,9 @@ export type EditorMessage = {
     path: TreeNodeId[]
 } | {
     type: "loadVoice"
+} | {
+    type: "setNoWrap",
+    value: boolean
 };
 
 export type TreeNodeId = string | number;
